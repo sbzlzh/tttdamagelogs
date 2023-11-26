@@ -1,69 +1,66 @@
 function Damagelog:DrawShootsTab()
-    self.Shoots = vgui.Create("DPanelList")
-    self.Shoots:SetSpacing(10)
-    self.ShootsRefresh = vgui.Create("DButton")
-    self.ShootsRefresh:SetText(TTTLogTranslate(GetDMGLogLang, "Refresh"))
+	self.Shoots = vgui.Create("DPanelList")
+	self.Shoots:SetSpacing(10)
 
-    self.ShootsRefresh.DoClick = function()
-        if not tonumber(self.SelectedRound) then
-            return
-        end
+	self.ShootsRefresh = vgui.Create("DButton")
+	self.ShootsRefresh:SetText(TTTLogTranslate(GetDMGLogLang, "Refresh"))
 
-        self.ShootTableTemp = {}
-        self.ReceivingST = true
-        self.ShootsList:Clear()
-        self.ShootsList:AddLine(TTTLogTranslate(GetDMGLogLang, "Loading"))
-        net.Start("DL_AskShootLogs")
-        net.WriteInt(self.SelectedRound, 8)
-        net.SendToServer()
-    end
+	self.ShootsRefresh.DoClick = function()
+		if not tonumber(self.SelectedRound) then return end
 
-    self.Shoots:AddItem(self.ShootsRefresh)
-    self.ShootsList = vgui.Create("DListView")
-    self.ShootsList:SetHeight(575)
-    self.ShootColumn = self.ShootsList:AddColumn("")
+		self.ShootTableTemp = {}
+		self.ReceivingST = true
+		self.ShootsList:Clear()
+		self.ShootsList:AddLine(TTTLogTranslate(GetDMGLogLang, "Loading"))
 
-    self.ShootColumn.UpdateText = function(shootColumn)
-        shootColumn:SetName(TTTLogTranslate(GetDMGLogLang, "CurrentRoundSelected") .. self.Round:GetValue())
-    end
+		net.Start("DL_AskShootLogs")
+		net.WriteInt(self.SelectedRound, 8)
+		net.SendToServer()
+	end
 
-    self.ShootColumn:UpdateText()
-    self.Shoots:AddItem(self.ShootsList)
+	self.Shoots:AddItem(self.ShootsRefresh)
+	self.ShootsList = vgui.Create("DListView")
+	self.ShootsList:SetHeight(575)
 
-    self.ShootsList.OnRowRightClick = function()
-        local Menu = DermaMenu()
-        Menu:Open()
+	self.ShootColumn = self.ShootsList:AddColumn("")
+	self.ShootColumn.UpdateText = function(shootColumn)
+		shootColumn:SetName(TTTLogTranslate(GetDMGLogLang, "CurrentRoundSelected") .. self.Round:GetValue())
+	end
 
-        Menu:AddOption(TTTLogTranslate(GetDMGLogLang, "CopyLines"), function()
-            local full_text = ""
-            local append = false
+	self.ShootColumn:UpdateText()
+	self.Shoots:AddItem(self.ShootsList)
 
-            for _, line in pairs(Damagelog.ShootsList:GetSelected()) do
-                if append then
-                    full_text = full_text .. "\n"
-                end
+	self.ShootsList.OnRowRightClick = function()
+		local Menu = DermaMenu()
 
-                full_text = full_text .. line:GetColumnText(1)
-                append = true
-            end
+		Menu:Open()
+		Menu:AddOption(TTTLogTranslate(GetDMGLogLang, "CopyLines"), function()
+			local full_text = ""
+			local append = false
 
-            SetClipboardText(full_text)
-        end):SetImage("icon16/tab_edit.png")
-    end
+			for _, line in pairs(Damagelog.ShootsList:GetSelected()) do
+				if append then
+					full_text = full_text .. "\n"
+				end
 
-    self.Tabs:AddSheet(TTTLogTranslate(GetDMGLogLang, "SLogs"), self.Shoots, "icon16/page_white_find.png", false, false)
+				full_text = full_text .. line:GetColumnText(1)
+
+				append = true
+			end
+
+			SetClipboardText(full_text)
+		end):SetImage("icon16/tab_edit.png")
+	end
+
+	self.Tabs:AddSheet(TTTLogTranslate(GetDMGLogLang, "SLogs"), self.Shoots, "icon16/page_white_find.png", false, false)
 end
 
 net.Receive("DL_SendShootLogs", function()
-    local rolelen = net.ReadUInt(15)
-    local roles = util.JSONToTable(util.Decompress(net.ReadData(rolelen)))
-    local datalen = net.ReadUInt(15)
-    local data = util.JSONToTable(util.Decompress(net.ReadData(datalen)))
-    if not istable(data) then
-        return
-    end
-    if IsValid(Damagelog.ShootsList) then
-        Damagelog.ShootsList:Clear()
-        Damagelog:SetDamageInfosLV(Damagelog.ShootsList, roles, nil, nil, nil, nil, data)
-    end
+	local rls = net.ReadTable()
+	local data = net.ReadTable()
+
+	if IsValid(Damagelog.ShootsList) then
+		Damagelog.ShootsList:Clear()
+		Damagelog:SetDamageInfosLV(Damagelog.ShootsList, rls, nil, nil, nil, nil, data)
+	end
 end)

@@ -1,76 +1,69 @@
 if SERVER then
-    Damagelog:EventHook("DoPlayerDeath")
+	Damagelog:EventHook("DoPlayerDeath")
 else
-    Damagelog:AddFilter("filter_show_suicides", DAMAGELOG_FILTER_BOOL, true)
-    Damagelog:AddColor("color_suicides", Color(25, 25, 220, 255))
+	Damagelog:AddFilter("filter_show_suicides", DAMAGELOG_FILTER_BOOL, true)
+	Damagelog:AddColor("color_suicides", Color(25, 25, 220, 255))
 end
 
 local event = {}
 event.Type = "KILL"
 
 function event:DoPlayerDeath(ply, attacker, dmginfo)
-    local class = attacker:GetClass()
+	local class = attacker:GetClass()
 
-    -- Ignore spectators
-    if (ply.IsGhost and ply:IsGhost()) then return end
+	if (IsValid(attacker) and ((attacker:IsPlayer() and attacker == ply) or class == "prop_physics" or class == "func_physbox")) or attacker:IsWorld() and not (dmginfo:IsDamageType(DMG_DROWN) or (ply.IsGhost and ply:IsGhost())) then
+		Damagelog.SceneID = Damagelog.SceneID + 1
 
-    -- Drowning is handled separately in the drownings.lua event file
-    if (attacker:IsWorld() and dmginfo:IsDamageType(DMG_DROWN)) then return end
+		local scene = Damagelog.SceneID
 
-    -- Ignore player kills. These are handled in the kills.lua event file
-    if (IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply) then return end
+		Damagelog.SceneRounds[scene] = Damagelog.CurrentRound
 
-    -- Ignore players being pushed to their death. This is handled in kills.lua
-    if (ply:GetPlayerThatRecentlyPushedMe() ~= nil) then return end
+		local tbl = {
+			[1] = ply:GetDamagelogID(),
+			[2] = scene
+		}
 
-    Damagelog.SceneID = Damagelog.SceneID + 1
-    local scene = Damagelog.SceneID
-    Damagelog.SceneRounds[scene] = Damagelog.CurrentRound
+		if scene then
+			timer.Simple(0.6, function()
+				Damagelog.Death_Scenes[scene] = table.Copy(Damagelog.Records)
+			end)
+		end
 
-    local tbl = {
-        [1] = ply:GetDamagelogID(),
-        [2] = scene
-    }
+		self.CallEvent(tbl)
 
-    if scene then
-        timer.Simple(0.6, function()
-            Damagelog.Death_Scenes[scene] = table.Copy(Damagelog.Records)
-        end)
-    end
-
-    self.CallEvent(tbl)
-
-    ply.rdmInfo = {
-        time = Damagelog.Time,
-        round = Damagelog.CurrentRound
-    }
-
-    ply.rdmSend = true
+		ply.rdmInfo = {
+			time = Damagelog.Time,
+			round = Damagelog.CurrentRound,
+		}
+		ply.rdmSend = true
+	end
 end
 
-function event:ToString(v, roles)
-    local info = Damagelog:InfoFromID(roles, v[1])
+function event:ToString(v, rls)
+	local info = Damagelog:InfoFromID(rls, v[1])
 
-    return string.format(TTTLogTranslate(GetDMGLogLang, "SomethingKilled"), info.nick, Damagelog:StrRole(info.role))
+	return string.format(TTTLogTranslate(GetDMGLogLang, "SomethingKilled"), info.nick, Damagelog:StrRole(info.role))
 end
 
 function event:IsAllowed(tbl)
-    return Damagelog.filter_settings["filter_show_suicides"]
+	return Damagelog.filter_settings["filter_show_suicides"]
 end
 
 function event:Highlight(line, tbl, text)
-    return table.HasValue(Damagelog.Highlighted, tbl[1])
+	return table.HasValue(Damagelog.Highlighted, tbl[1])
 end
 
 function event:GetColor(tbl)
-    return Damagelog:GetColor("color_suicides")
+	return Damagelog:GetColor("color_suicides")
 end
 
-function event:RightClick(line, tbl, roles, text)
-    line:ShowTooLong(true)
-    local ply = Damagelog:InfoFromID(roles, tbl[1])
-    line:ShowCopy(true, {ply.nick, util.SteamIDFrom64(ply.steamid64)})
-    line:ShowDeathScene(tbl[1], tbl[1], tbl[2])
+function event:RightClick(line, tbl, rls, text)
+	line:ShowTooLong(true)
+
+	local ply = Damagelog:InfoFromID(rls, tbl[1])
+
+	line:ShowCopy(true, {ply.nick, util.SteamIDFrom64(ply.steamid64)})
+	line:ShowDeathScene(tbl[1], tbl[1], tbl[2])
 end
 
 Damagelog:AddEvent(event)

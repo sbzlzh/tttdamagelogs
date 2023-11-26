@@ -2,388 +2,368 @@ local color_what = Color(255, 0, 0, 100)
 local color_darkblue = Color(25, 25, 220)
 local color_orange = Color(255, 128, 0)
 
-function Damagelog:SetLineMenu(item, infos, tbl, roles, text, old_logs)
-    item.ShowTooLong = function(_, b)
-        item.ShowLong = b
-    end
+function Damagelog:SetLineMenu(item, infos, tbl, rls, text, old_logs)
+	item.ShowTooLong = function(_, b)
+		item.ShowLong = b
+	end
 
-    item.ShowCopy = function(_, b, steamid1, steamid2)
-        item.Copy = b
-        item.steamid1 = steamid1
-        item.steamid2 = steamid2
-    end
+	item.ShowCopy = function(_, b, steamid1, steamid2)
+		item.Copy = b
+		item.steamid1 = steamid1
+		item.steamid2 = steamid2
+	end
 
-    item.ShowDamageInfos = function(_, ply1, ply2)
-        item.DamageInfos = true
-        item.ply1 = ply1
-        item.ply2 = ply2
-    end
+	item.ShowDamageInfos = function(_, ply1, ply2)
+		item.DamageInfos = true
+		item.ply1 = ply1
+		item.ply2 = ply2
+	end
 
-    item.ShowDeathScene = function(_, ply1, ply2, id)
-        item.DeathScene = true
-        item.ply1 = ply1
-        item.ply2 = ply2
-        item.sceneid = id
-    end
+	item.ShowDeathScene = function(_, ply1, ply2, id)
+		item.DeathScene = true
+		item.ply1 = ply1
+		item.ply2 = ply2
+		item.sceneid = id
+	end
 
-    item.text = text
-    item.old_logs = old_logs
+	item.text = text
+	item.old_logs = old_logs
+	item.OnRightClick = function()
+		if not item.ShowLong and not item.Copy and not item.DamageInfos then return end
 
-    item.OnRightClick = function()
-        if not item.ShowLong and not item.Copy and not item.DamageInfos then
-            return
-        end
+		local menu = DermaMenu()
+		local pnl = vgui.Create("DMenuOption", menu)
 
-        local menu = DermaMenu()
-        local pnl = vgui.Create("DMenuOption", menu)
-        local copy = DermaMenu(menu)
-        copy:SetVisible(false)
-        pnl:SetSubMenu(copy)
-        pnl:SetText(TTTLogTranslate(GetDMGLogLang, "Copy"))
-        pnl:SetImage("icon16/tab_edit.png")
-        menu:AddPanel(pnl)
+		local copy = DermaMenu(menu)
+		copy:SetVisible(false)
 
-        copy:AddOption(TTTLogTranslate(GetDMGLogLang, "Lines"), function()
-            local full_text = ""
-            local append = false
+		pnl:SetSubMenu(copy)
+		pnl:SetText(TTTLogTranslate(GetDMGLogLang, "Copy"))
+		pnl:SetImage("icon16/tab_edit.png")
 
-            for _, line in pairs(item:GetListView():GetSelected()) do
-                if append then
-                    full_text = full_text .. "\n"
-                end
+		menu:AddPanel(pnl)
 
-                full_text = full_text .. "[" .. line:GetColumnText(1) .. "] " .. line:GetColumnText(3)
-                append = true
-            end
+		copy:AddOption(TTTLogTranslate(GetDMGLogLang, "Lines"), function()
+			local full_text = ""
+			local append = false
 
-            SetClipboardText(full_text)
-        end)
+			for _, line in pairs(item:GetListView():GetSelected()) do
+				if append then
+					full_text = full_text .. "\n"
+				end
 
-        if item.Copy then
-            copy:AddOption(TTTLogTranslate(GetDMGLogLang, "SteamIDof") .. item.steamid1[1], function()
-                SetClipboardText(item.steamid1[2])
-            end)
+				full_text = full_text .. "[" .. line:GetColumnText(1) .. "] " .. line:GetColumnText(3)
+				append = true
+			end
 
-            if item.steamid2 then
-                copy:AddOption(TTTLogTranslate(GetDMGLogLang, "SteamIDof") .. item.steamid2[1], function()
-                    SetClipboardText(item.steamid2[2])
-                end)
-            end
-        end
+			SetClipboardText(full_text)
+		end)
 
-        if item.DamageInfos then
-            menu:AddOption(TTTLogTranslate(GetDMGLogLang, "ShowDamageInfos"), function()
-                if item.old_logs then
-                    local found, result = self:FindFromOldLogs(tbl.time, item.ply1, item.ply2)
-                    self:SetDamageInfosLV(self.OldDamageInfo, roles, tbl.ply1, tbl.ply2, tbl.time, tbl.time - 10, found and result)
-                    self.DamageInfoForm:Toggle()
-                else
-                    net.Start("DL_AskDamageInfos")
-                    net.WriteUInt(tbl.time, 32)
-                    net.WriteUInt(item.ply1, 32)
-                    net.WriteUInt(item.ply2, 32)
+		if item.Copy then
+			copy:AddOption(TTTLogTranslate(GetDMGLogLang, "SteamIDof") .. item.steamid1[1], function()
+				SetClipboardText(item.steamid1[2])
+			end)
 
-                    if not tbl.round then
-                        net.WriteUInt(self.SelectedRound, 32)
-                    else
-                        net.WriteUInt(tbl.round, 32)
-                    end
+			if item.steamid2 then
+				copy:AddOption(TTTLogTranslate(GetDMGLogLang, "SteamIDof") .. item.steamid2[1], function()
+					SetClipboardText(item.steamid2[2])
+				end)
+			end
+		end
 
-                    net.SendToServer()
-                end
-            end):SetImage("icon16/gun.png")
-        end
+		if item.DamageInfos then
+			menu:AddOption(TTTLogTranslate(GetDMGLogLang, "ShowDamageInfos"), function()
+				if item.old_logs then
+					local found, result = self:FindFromOldLogs(tbl.time, item.ply1, item.ply2)
 
-        if item.DeathScene then
-            menu:AddOption(TTTLogTranslate(GetDMGLogLang, "ShowDeathScene"), function()
-                net.Start("DL_AskDeathScene")
-                net.WriteUInt(item.sceneid, 32)
-                net.WriteUInt(item.ply1, 32)
-                net.WriteUInt(item.ply2, 32)
-                net.SendToServer()
-            end):SetImage("icon16/television.png")
-        end
+					self:SetDamageInfosLV(self.OldDamageInfo, rls, tbl.ply1, tbl.ply2, tbl.time, tbl.time - 10, found and result)
 
-        if item.ShowLong then
-            menu:AddOption(TTTLogTranslate(GetDMGLogLang, "FullDisplay"), function()
-                Derma_Message(item.text, TTTLogTranslate(GetDMGLogLang, "FullDisplay"), TTTLogTranslate(GetDMGLogLang, "Close"))
-            end):SetImage("icon16/eye.png")
-        end
+					self.DamageInfoForm:Toggle()
+				else
+					net.Start("DL_AskDamageInfos")
+					net.WriteUInt(tbl.time, 32)
+					net.WriteUInt(item.ply1, 32)
+					net.WriteUInt(item.ply2, 32)
 
-        menu:Open()
-    end
+					if not tbl.round then
+						net.WriteUInt(self.SelectedRound, 32)
+					else
+						net.WriteUInt(tbl.round, 32)
+					end
 
-    infos:RightClick(item, tbl.infos, roles, text)
+					net.SendToServer()
+				end
+			end):SetImage("icon16/gun.png")
+		end
+
+		if item.DeathScene then
+			menu:AddOption(TTTLogTranslate(GetDMGLogLang, "ShowDeathScene"), function()
+				net.Start("DL_AskDeathScene")
+				net.WriteUInt(item.sceneid, 32)
+				net.WriteUInt(item.ply1, 32)
+				net.WriteUInt(item.ply2, 32)
+				net.SendToServer()
+			end):SetImage("icon16/television.png")
+		end
+
+		if item.ShowLong then
+			menu:AddOption(TTTLogTranslate(GetDMGLogLang, "FullDisplay"), function()
+				Derma_Message(item.text, TTTLogTranslate(GetDMGLogLang, "FullDisplay"), TTTLogTranslate(GetDMGLogLang, "Close"))
+			end):SetImage("icon16/eye.png")
+		end
+
+		menu:Open()
+	end
+
+	infos:RightClick(item, tbl.infos, rls, text)
 end
 
-function Damagelog:AddLogsLine(listview, tbl, roles, nofilters, old)
-    if type(tbl) ~= "table" then
-        return
-    end
+function Damagelog:AddLogsLine(listview, tbl, rls, nofilters, old)
+	if type(tbl) ~= "table" then return end
 
-    local infos = self.events[tbl.id]
+	local infos = self.events[tbl.id]
+	if not infos then return end
 
-    if not infos then
-        return
-    end
+	if not nofilters and not infos:IsAllowed(tbl.infos, rls) then return end
 
-    if not nofilters and not infos:IsAllowed(tbl.infos, roles) then
-        return
-    end
+	local text = infos:ToString(tbl.infos, rls)
+	local item = listview:AddLine(util.SimpleTime(tbl.time, "%02i:%02i"), infos.Type, text, "")
 
-    local text = infos:ToString(tbl.infos, roles)
-    local item = listview:AddLine(util.SimpleTime(tbl.time, "%02i:%02i"), infos.Type, text, "")
+	if tbl.infos.icon then
+		if tbl.infos.icon[1] then
+			local image = vgui.Create("DImage", item.Columns[4])
+			image:SetImage(tbl.infos.icon[1])
+			image:SetSize(16, 16)
+			image:SetPos(6, 1)
+		end
 
-    if tbl.infos.icon then
-        if tbl.infos.icon[1] then
-            local image = vgui.Create("DImage", item.Columns[4])
-            image:SetImage(tbl.infos.icon[1])
-            image:SetSize(16, 16)
-            image:SetPos(6, 1)
-        end
+		if tbl.infos.icon[2] then
+			item:SetTooltip(TTTLogTranslate(GetDMGLogLang, "VictimShotFirst"))
+		end
+	end
 
-        if tbl.infos.icon[2] then
-            item:SetTooltip(TTTLogTranslate(GetDMGLogLang, "VictimShotFirst"))
-        end
-    end
+	function item:PaintOver(w, h)
+		if not self:IsSelected() and infos:Highlight(item, tbl.infos, text) then
+			surface.SetDrawColor(color_what)
+			surface.DrawRect(0, 0, w, h)
+		else
+			for _, v in pairs(item.Columns) do
+				v:SetTextColor(infos:GetColor(tbl.infos, rls))
+			end
+		end
+	end
 
-    function item:PaintOver(w, h)
-        if not self:IsSelected() and infos:Highlight(item, tbl.infos, text) then
-            surface.SetDrawColor(color_what)
-            surface.DrawRect(0, 0, w, h)
-        else
-            for _, v in pairs(item.Columns) do
-                v:SetTextColor(infos:GetColor(tbl.infos, roles))
-            end
-        end
-    end
+	self:SetLineMenu(item, infos, tbl, rls, text, old)
 
-    self:SetLineMenu(item, infos, tbl, roles, text, old)
-
-    return true
+	return true
 end
 
 function Damagelog:SetListViewTable(listview, tbl, nofilters, old)
-    if not tbl or not tbl.logs then
-        return
-    end
+	if not tbl or not tbl.logs then return end
 
-    if #tbl.logs > 0 then
-        local added = false
+	if #tbl.logs > 0 then
+		local added = false
 
-        for _, v in ipairs(tbl.logs) do
-            local line_added = self:AddLogsLine(listview, v, tbl.roles, nofilters, old)
+		for _, v in ipairs(tbl.logs) do
+			local line_added = self:AddLogsLine(listview, v, tbl.rls, nofilters, old)
 
-            if not added and line_added then
-                added = true
-            end
-        end
+			if not added and line_added then
+				added = true
+			end
+		end
 
-        if not added then
-            listview:AddLine("", "", TTTLogTranslate(GetDMGLogLang, "EmptyLogsFilters"))
-        end
-    else
-        listview:AddLine("", "", TTTLogTranslate(GetDMGLogLang, "EmptyLogs"))
-    end
+		if not added then
+			listview:AddLine("", "", TTTLogTranslate(GetDMGLogLang, "EmptyLogsFilters"))
+		end
+	else
+		listview:AddLine("", "", TTTLogTranslate(GetDMGLogLang, "EmptyLogs"))
+	end
 end
 
 function Damagelog:SetRolesListView(listview, tbl)
-    listview:Clear()
+	listview:Clear()
 
-    if not tbl then
-        return
-    end
+	if not tbl then return end
 
-    for _, v in pairs(tbl) do
-        if v.role ~= ROLE_INNOCENT or GetConVar("ttt_dmglogs_showinnocents"):GetBool() then
-            self:AddRoleLine(listview, v.nick, v.role)
-        end
-    end
+	for _, v in pairs(tbl) do
+		if v.role ~= ROLE_INNOCENT or GetConVar("ttt_dmglogs_showinnocents"):GetBool() then
+			self:AddRoleLine(listview, v.nick, v.role)
+		end
+	end
 end
 
-local role_colors = { }
-
--- We need to wait for the TTT gamemode to init to ensure the ROLE_XXX values are defined
-hook.Remove("Initialize", "damagelogs_gminit_rolecolours")
-hook.Add("Initialize", "damagelogs_gminit_rolecolours", function()
-    -- Roles are defined in lua/damagelogs/shared/defines.lua
-    role_colors = {
-        [ROLE_INNOCENT] = Color(0, 200, 0),
-        [ROLE_TRAITOR] = Color(200, 0, 0),
-        [ROLE_DETECTIVE] = Color(0, 0, 200),
-        [DAMAGELOG_ROLE_DISCONNECTED] = Color(0, 0, 0)
-    }
-end)
+local role_colors = {
+	[1] = Color(0, 200, 0),
+	[2] = Color(200, 0, 0),
+	[3] = Color(0, 0, 200),
+	["disconnected"] = Color(0, 0, 0)
+}
 
 function Damagelog:AddRoleLine(listview, nick, role)
-    if role == DAMAGELOG_ROLE_JOINAFTERROUNDSTART or role == DAMAGELOG_ROLE_SPECTATOR then return end
+	if role ~= -3 then -- TODO what is with role == -1 and -2 ? or "disconnected" ?
+		local item = listview:AddLine(nick, role < 0 and "disconnected" or self:StrRole(role), "")
 
-    local item = listview:AddLine(nick, self:StrRole(role), "")
+		function item:PaintOver()
+			for _, v in pairs(item.Columns) do
+				if role < 0 then
+					v:SetTextColor(role_colors["disconnected"])
+				else
+					if not TTT2 then
+						v:SetTextColor(role_colors[role + 1])
+					else
+						v:SetTextColor(roles.GetByIndex(role).color)
+					end
+				end
+			end
+		end
 
-    function item:PaintOver()
-        for _, v in pairs(item.Columns) do
-            if role < 0 then
-                v:SetTextColor(role_colors[DAMAGELOG_ROLE_DISCONNECTED])
-            else
-                if TTT2 then
-                    v:SetTextColor(GetRoleByIndex(role).color)
-                elseif CR_VERSION then
-                    v:SetTextColor(ROLE_COLORS[role])
-                else
-                    v:SetTextColor(role_colors[role])
-                end
-            end
-        end
-    end
+		item.Nick = nick
+		item.Round = self.SelectedRound
 
-    item.Nick = nick
-    item.Round = self.SelectedRound
-    local sync_ent = self:GetSyncEnt()
+		local sync_ent = self:GetSyncEnt()
 
-    item.Think = function(panel)
-        if GetRoundState() == ROUND_ACTIVE and sync_ent:GetPlayedRounds() == panel.Round then
-            local ent = self.RoleNicks and self.RoleNicks[panel.Nick]
+		item.Think = function(panel)
+			if GetRoundState() == ROUND_ACTIVE and sync_ent:GetPlayedRounds() == panel.Round then
+				local ent = self.RoleNicks and self.RoleNicks[panel.Nick]
 
-            if IsValid(ent) then
-                panel:SetColumnText(3, ent:Alive() and not (ent.IsGhost and ent:IsGhost()) and not ent:IsSpec() and TTTLogTranslate(GetDMGLogLang, "Yes") or TTTLogTranslate(GetDMGLogLang, "No"))
-            else
-                panel:SetColumnText(3, TTTLogTranslate(GetDMGLogLang, "ChatDisconnected"))
-            end
-        else
-            panel:SetColumnText(3, TTTLogTranslate(GetDMGLogLang, "RoundEnded"))
-        end
-    end
+				if IsValid(ent) then
+					panel:SetColumnText(3, ent:Alive() and not (ent.IsGhost and ent:IsGhost()) and not ent:IsSpec() and TTTLogTranslate(GetDMGLogLang, "Yes") or TTTLogTranslate(GetDMGLogLang, "No"))
+				else
+					panel:SetColumnText(3, TTTLogTranslate(GetDMGLogLang, "ChatDisconnected"))
+				end
+			else
+				panel:SetColumnText(3, TTTLogTranslate(GetDMGLogLang, "RoundEnded"))
+			end
+		end
+	end
 end
 
 local shoot_colors = {
-    [Color(46, 46, 46)] = true,
-    [Color(66, 66, 66)] = true,
-    [Color(125, 125, 125)] = true,
-    [Color(255, 6, 13)] = true,
-    [Color(0, 0, 128)] = true,
-    [Color(0, 0, 205)] = true,
-    [Color(79, 209, 204)] = true,
-    [Color(165, 42, 42)] = true,
-    [Color(238, 59, 59)] = true,
-    [Color(210, 105, 30)] = true,
-    [Color(255, 165, 79)] = true,
-    [Color(107, 66, 38)] = true,
-    [Color(166, 128, 100)] = true,
-    [Color(0, 100, 0)] = true,
-    [Color(34, 139, 34)] = true,
-    [Color(124, 252, 0)] = true,
-    [Color(78, 328, 148)] = true,
-    [Color(139, 10, 80)] = true,
-    [Color(205, 16, 118)] = true,
-    [Color(205, 85, 85)] = true,
-    [Color(110, 6, 250)] = true,
-    [Color(30, 235, 0)] = true,
-    [Color(205, 149, 12)] = true,
-    [Color(0, 0, 250)] = true,
-    [Color(219, 150, 50)] = true,
-    [Color(255, 36, 0)] = true,
-    [Color(205, 104, 57)] = true,
-    [Color(191, 62, 255)] = true,
-    [Color(99, 86, 126)] = true,
-    [Color(133, 99, 99)] = true
+	[Color(46, 46, 46)] = true,
+	[Color(66, 66, 66)] = true,
+	[Color(125, 125, 125)] = true,
+	[Color(255, 6, 13)] = true,
+	[Color(0, 0, 128)] = true,
+	[Color(0, 0, 205)] = true,
+	[Color(79, 209, 204)] = true,
+	[Color(165, 42, 42)] = true,
+	[Color(238, 59, 59)] = true,
+	[Color(210, 105, 30)] = true,
+	[Color(255, 165, 79)] = true,
+	[Color(107, 66, 38)] = true,
+	[Color(166, 128, 100)] = true,
+	[Color(0, 100, 0)] = true,
+	[Color(34, 139, 34)] = true,
+	[Color(124, 252, 0)] = true,
+	[Color(78, 328, 148)] = true,
+	[Color(139, 10, 80)] = true,
+	[Color(205, 16, 118)] = true,
+	[Color(205, 85, 85)] = true,
+	[Color(110, 6, 250)] = true,
+	[Color(30, 235, 0)] = true,
+	[Color(205, 149, 12)] = true,
+	[Color(0, 0, 250)] = true,
+	[Color(219, 150, 50)] = true,
+	[Color(255, 36, 0)] = true,
+	[Color(205, 104, 57)] = true,
+	[Color(191, 62, 255)] = true,
+	[Color(99, 86, 126)] = true,
+	[Color(133, 99, 99)] = true
 }
 
-function Damagelog:SetDamageInfosLV(listview, roles, att, victim, beg, t, result)
-    if not IsValid(self.Menu) then
-        return
-    end
+function Damagelog:SetDamageInfosLV(listview, rls, att, victim, beg, t, result)
+	if not IsValid(self.Menu) then return end
 
-    for k in pairs(shoot_colors) do
-        shoot_colors[k] = true
-    end
+	for k in pairs(shoot_colors) do
+		shoot_colors[k] = true
+	end
 
-    if beg then
-        beg = string.FormattedTime(math.Clamp(beg, 0, 999), "%02i:%02i")
-    end
+	if beg then
+		beg = string.FormattedTime(math.Clamp(beg, 0, 999), "%02i:%02i")
+	end
 
-    if t then
-        t = string.FormattedTime(t, "%02i:%02i")
-    end
+	if t then
+		t = string.FormattedTime(t, "%02i:%02i")
+	end
 
-    listview:Clear()
+	listview:Clear()
 
-    if victim and att then
-        listview:AddLine(string.format(TTTLogTranslate(GetDMGLogLang, "DamageInfosBetween"), victim, att, beg, t))
-    end
+	if victim and att then
+		listview:AddLine(string.format(TTTLogTranslate(GetDMGLogLang, "DamageInfosBetween"), victim, att, beg, t))
+	end
 
-    if not result or table.Count(result) <= 0 then
-        listview:AddLine(TTTLogTranslate(GetDMGLogLang, "EmptyLogs"))
-        -- Currently unused
-        -- Currently unused
-    else
-        local nums = {}
-        local used_nicks = {}
+	if not result or table.Count(result) <= 0 then
+		listview:AddLine(TTTLogTranslate(GetDMGLogLang, "EmptyLogs"))
+	else
+		local nums = {}
+		local used_nicks = {}
 
-        for k in pairs(result) do
-            table.insert(nums, k)
-        end
+		for k in pairs(result) do
+			table.insert(nums, k)
+		end
 
-        table.sort(nums)
-        local players = {}
+		table.sort(nums)
 
-        for _, v in ipairs(nums) do
-            local info = result[v]
-            local color
+		local players = {}
 
-            for _, i in pairs(info) do
-                if att and victim then
-                    if not players[1] then
-                        players[1] = i[1]
-                    elseif not players[2] then
-                        players[2] = i[1]
-                    end
-                else
-                    if not used_nicks[i[1]] then
-                        local found = false
+		for _, v in ipairs(nums) do
+			local info = result[v]
+			local color
 
-                        for k, v2 in RandomPairs(shoot_colors) do
-                            if v2 and not found then
-                                color = k
-                                found = true
-                            end
-                        end
+			for _, i in pairs(info) do
+				if att and victim then
+					if not players[1] then
+						players[1] = i[1]
+					elseif not players[2] then
+						players[2] = i[1]
+					end
+				else
+					if not used_nicks[i[1]] then
+						local found = false
 
-                        if found then
-                            shoot_colors[color] = false
-                            used_nicks[i[1]] = color
-                        else
-                            used_nicks[i[1]] = COLOR_WHITE
-                        end
-                    else
-                        color = used_nicks[i[1]]
-                    end
-                end
+						for k, v2 in RandomPairs(shoot_colors) do
+							if v2 and not found then
+								color = k
+								found = true
+							end
+						end
 
-                local item
+						if found then
+							shoot_colors[color] = false
+							used_nicks[i[1]] = color
+						else
+							used_nicks[i[1]] = COLOR_WHITE
+						end
+					else
+						color = used_nicks[i[1]]
+					end
+				end
 
-                if i[2] == "crowbartir" then
-                    item = listview:AddLine(string.format(TTTLogTranslate(GetDMGLogLang, "CrowbarSwung"), string.FormattedTime(v, "%02i:%02i"), self:InfoFromID(roles, i[1]).nick))
-                elseif i[2] == "crowbarpouss" then
-                    item = listview:AddLine(string.format(TTTLogTranslate(GetDMGLogLang, "HasPushed"), string.FormattedTime(v, "%02i:%02i"), self:InfoFromID(roles, i[1]).nick, self:InfoFromID(roles, i[3]).nick))
-                else
-                    wep = Damagelog:GetWeaponName(i[2]) or TTTLogTranslate(GetDMGLogLang, "UnknownWeapon")
-                    item = listview:AddLine(string.format(TTTLogTranslate(GetDMGLogLang, "HasShot"), string.FormattedTime(v, "%02i:%02i"), self:InfoFromID(roles, i[1]).nick, wep))
-                end
+				local item
 
-                item.PaintOver = function()
-                    if att and victim then
-                        if i[1] == players[1] then
-                            item.Columns[1]:SetTextColor(color_darkblue)
-                        elseif i[1] == players[2] then
-                            item.Columns[1]:SetTextColor(color_orange)
-                        end
-                    else
-                        item.Columns[1]:SetTextColor(color)
-                    end
-                end
-            end
-        end
-    end
+				if i[2] == "crowbartir" then -- Currently unused
+					item = listview:AddLine(string.format(TTTLogTranslate(GetDMGLogLang, "CrowbarSwung"), string.FormattedTime(v, "%02i:%02i"), self:InfoFromID(rls, i[1]).nick))
+				elseif i[2] == "crowbarpouss" then -- Currently unused
+					item = listview:AddLine(string.format(TTTLogTranslate(GetDMGLogLang, "HasPushed"), string.FormattedTime(v, "%02i:%02i"), self:InfoFromID(rls, i[1]).nick, self:InfoFromID(rls, i[3]).nick))
+				else
+					wep = Damagelog:GetWeaponName(i[2]) or TTTLogTranslate(GetDMGLogLang, "UnknownWeapon")
+					item = listview:AddLine(string.format(TTTLogTranslate(GetDMGLogLang, "HasShot"), string.FormattedTime(v, "%02i:%02i"), self:InfoFromID(rls, i[1]).nick, wep))
+				end
 
-    self.DamageInfoBox:Toggle()
+				item.PaintOver = function()
+					if att and victim then
+						if i[1] == players[1] then
+							item.Columns[1]:SetTextColor(color_darkblue)
+						elseif i[1] == players[2] then
+							item.Columns[1]:SetTextColor(color_orange)
+						end
+					else
+						item.Columns[1]:SetTextColor(color)
+					end
+				end
+			end
+		end
+	end
+
+	self.DamageInfoBox:Toggle()
 end

@@ -1,104 +1,97 @@
 if SERVER then
-    Damagelog:EventHook("DoPlayerDeath")
+	Damagelog:EventHook("DoPlayerDeath")
 else
-    Damagelog:AddFilter("filter_show_kills", DAMAGELOG_FILTER_BOOL, true)
-    Damagelog:AddColor("color_team_kills", Color(255, 40, 40))
-    Damagelog:AddColor("color_kills", Color(255, 128, 0, 255))
+	Damagelog:AddFilter("filter_show_kills", DAMAGELOG_FILTER_BOOL, true)
+	Damagelog:AddColor("color_team_kills", Color(255, 40, 40))
+	Damagelog:AddColor("color_kills", Color(255, 128, 0, 255))
 end
 
 local event = {}
 event.Type = "KILL"
 
 function event:DoPlayerDeath(ply, attacker, dmginfo)
-    -- If the player was pushed, set the attacker to the person that pushed them
-    local playerThatPushed = ply:GetPlayerThatRecentlyPushedMe()
-    if (playerThatPushed ~= nil and dmginfo:GetDamageType() == DMG_FALL and attacker:IsWorld()) then
-        attacker = playerThatPushed
-    end
+	if IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply and not (attacker.IsGhost and attacker:IsGhost()) then
+		local scene = false
 
-    -- Ignore spectators
-    if (ply.IsGhost and ply:IsGhost()) then return end
+		Damagelog.SceneID = Damagelog.SceneID + 1
+		scene = Damagelog.SceneID
+		Damagelog.SceneRounds[scene] = Damagelog.CurrentRound
 
-    -- Ignore suicides/drownings. These are handled in the suicide.lua event file
-    -- This may also ignore environmental deaths, caused by another player
-    if (IsValid(attacker) and attacker:IsPlayer() and attacker ~= ply) == false then return end
+		local tbl = {
+			[1] = attacker:GetDamagelogID(),
+			[2] = ply:GetDamagelogID(),
+			[3] = Damagelog:WeaponFromDmg(dmginfo),
+			[4] = scene
+		}
 
-    local scene = false
-    Damagelog.SceneID = Damagelog.SceneID + 1
-    scene = Damagelog.SceneID
-    Damagelog.SceneRounds[scene] = Damagelog.CurrentRound
+		self.CallEvent(tbl)
 
-    local tbl = {
-        [1] = attacker:GetDamagelogID(),
-        [2] = ply:GetDamagelogID(),
-        [3] = Damagelog:WeaponFromDmg(dmginfo),
-        [4] = scene
-    }
+		if scene then
+			timer.Simple(0.6, function()
+				Damagelog.Death_Scenes[scene] = table.Copy(Damagelog.Records)
+			end)
+		end
 
-    self.CallEvent(tbl)
+		if GetRoundState() == ROUND_ACTIVE then
+			net.Start("DL_Ded")
 
-    if scene then
-        timer.Simple(0.6, function()
-            Damagelog.Death_Scenes[scene] = table.Copy(Damagelog.Records)
-        end)
-    end
+			if not TTT2 and attacker:GetRole() == ROLE_TRAITOR and (ply:GetRole() == ROLE_INNOCENT or ply:GetRole() == ROLE_DETECTIVE)
+			or TTT2 and attacker:HasTeam(TEAM_TRAITOR) and not ply:HasTeam(TEAM_TRAITOR)
+			then
+				net.WriteUInt(0, 1)
+			else
+				net.WriteUInt(1, 1)
+				net.WriteString(attacker:Nick())
+			end
 
-    if GetRoundState() == ROUND_ACTIVE then
-        net.Start("DL_Ded")
+			net.Send(ply)
 
-        if attacker:GetRole() == ROLE_TRAITOR and (ply:GetRole() == ROLE_INNOCENT or ply:GetRole() == ROLE_DETECTIVE)
-          or TTT2 and attacker:GetTeam() == TEAM_TRAITOR and not attacker:IsInTeam(ply)
-          or CR_VERSION and attacker:IsTraitorTeam() and not ply:IsTraitorTeam() then
-            net.WriteUInt(0, 1)
-        else
-            net.WriteUInt(1, 1)
-            net.WriteString(attacker:Nick())
-        end
-
-        net.Send(ply)
-        ply:SetNWEntity("DL_Killer", attacker)
-    end
+			ply:SetNWEntity("DL_Killer", attacker)
+		end
+	end
 end
 
-function event:ToString(v, roles)
-    local weapon = v[3]
-    weapon = Damagelog:GetWeaponName(weapon)
-    local attackerInfo = Damagelog:InfoFromID(roles, v[1])
-    local victimInfo = Damagelog:InfoFromID(roles, v[2])
+function event:ToString(v, rls)
+	local weapon = v[3]
+	weapon = Damagelog:GetWeaponName(weapon)
 
-    return string.format(TTTLogTranslate(GetDMGLogLang, "HasKilled"), attackerInfo.nick, Damagelog:StrRole(attackerInfo.role), victimInfo.nick, Damagelog:StrRole(victimInfo.role), weapon or TTTLogTranslate(GetDMGLogLang, "UnknownWeapon"))
+	local attackerInfo = Damagelog:InfoFromID(rls, v[1])
+	local victimInfo = Damagelog:InfoFromID(rls, v[2])
+
+	return string.format(TTTLogTranslate(GetDMGLogLang, "HasKilled"), attackerInfo.nick, Damagelog:StrRole(attackerInfo.role), victimInfo.nick, Damagelog:StrRole(victimInfo.role), weapon or TTTLogTranslate(GetDMGLogLang, "UnknownWeapon"))
 end
 
 function event:IsAllowed(tbl)
-    return Damagelog.filter_settings["filter_show_kills"]
+	return Damagelog.filter_settings["filter_show_kills"]
 end
 
 function event:Highlight(line, tbl, text)
-    if table.HasValue(Damagelog.Highlighted, tbl[1]) or table.HasValue(Damagelog.Highlighted, tbl[2]) then
-        return true
-    end
+	if table.HasValue(Damagelog.Highlighted, tbl[1]) or table.HasValue(Damagelog.Highlighted, tbl[2]) then
+		return true
+	end
 
-    return false
+	return false
 end
 
-function event:GetColor(tbl, roles)
-    local ent = Damagelog:InfoFromID(roles, tbl[1])
-    local att = Damagelog:InfoFromID(roles, tbl[2])
+function event:GetColor(tbl, rls)
+	local ent = Damagelog:InfoFromID(rls, tbl[1])
+	local att = Damagelog:InfoFromID(rls, tbl[2])
 
-    if Damagelog:IsTeamkill(att.role, ent.role) then
-        return Damagelog:GetColor("color_team_kills")
-    else
-        return Damagelog:GetColor("color_kills")
-    end
+	if Damagelog:IsTeamkill(player.GetBySteamID64(att.steamid64), player.GetBySteamID64(ent.steamid64)) then
+		return Damagelog:GetColor("color_team_kills")
+	else
+		return Damagelog:GetColor("color_kills")
+	end
 end
 
-function event:RightClick(line, tbl, roles, text)
-    local attackerInfo = Damagelog:InfoFromID(roles, tbl[1])
-    local victimInfo = Damagelog:InfoFromID(roles, tbl[2])
-    line:ShowTooLong(true)
-    line:ShowCopy(true, {attackerInfo.nick, util.SteamIDFrom64(attackerInfo.steamid64)}, {victimInfo.nick, util.SteamIDFrom64(victimInfo.steamid64)})
-    line:ShowDamageInfos(tbl[1], tbl[2])
-    line:ShowDeathScene(tbl[2], tbl[1], tbl[4])
+function event:RightClick(line, tbl, rls, text)
+	local attackerInfo = Damagelog:InfoFromID(rls, tbl[1])
+	local victimInfo = Damagelog:InfoFromID(rls, tbl[2])
+
+	line:ShowTooLong(true)
+	line:ShowCopy(true, {attackerInfo.nick, util.SteamIDFrom64(attackerInfo.steamid64)}, {victimInfo.nick, util.SteamIDFrom64(victimInfo.steamid64)})
+	line:ShowDamageInfos(tbl[1], tbl[2])
+	line:ShowDeathScene(tbl[2], tbl[1], tbl[4])
 end
 
 Damagelog:AddEvent(event)

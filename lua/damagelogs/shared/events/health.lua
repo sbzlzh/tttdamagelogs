@@ -1,113 +1,118 @@
 if SERVER then
-    Damagelog:EventHook("TTTPlayerUsedHealthStation")
-    Damagelog:EventHook("TTTEndRound")
+	Damagelog:EventHook("TTTPlayerUsedHealthStation")
+	Damagelog:EventHook("TTTEndRound")
 else
-    Damagelog:AddFilter("filter_show_healthstation", DAMAGELOG_FILTER_BOOL, false)
-    Damagelog:AddColor("color_heal", Color(0, 255, 128))
+	Damagelog:AddFilter("filter_show_healthstation", DAMAGELOG_FILTER_BOOL, false)
+	Damagelog:AddColor("color_heal", Color(0, 255, 128))
 end
 
 local usages = {}
+
 local event = {}
 event.Type = "HEAL"
 
 function event:TTTPlayerUsedHealthStation(ply, ent, healed)
-    if not (ply.IsGhost and ply:IsGhost()) and ply:IsPlayer() then
-        if usages[ply:SteamID()] == nil then
-            local timername = "HealTimer_" .. tostring(ply:SteamID())
+	if not (ply.IsGhost and ply:IsGhost()) and ply:IsPlayer() then
+		if usages[ply:SteamID64()] == nil then
+			local timername = "HealTimer_" .. tostring(ply:SteamID64())
 
-            timer.Create(timername, 5, 0, function()
-                if not IsValid(ply) then
-                    timer.Remove(timername)
-                elseif usages[ply:SteamID()] > 0 then
-                    self:Store(ply, ent, usages[ply:SteamID()])
-                    usages[ply:SteamID()] = 0
-                else
-                    usages[ply:SteamID()] = nil
-                    self:RemoveTimer(ply:SteamID())
-                end
-            end)
+			timer.Create(timername, 5, 0, function()
+				if not IsValid(ply) then
+					timer.Remove(timername)
+				elseif usages[ply:SteamID64()] > 0 then
+					self:Store(ply, ent, usages[ply:SteamID64()])
 
-            self:Store(ply, ent, healed)
-            usages[ply:SteamID()] = 0
-        else
-            usages[ply:SteamID()] = usages[ply:SteamID()] + healed
-        end
-    end
+					usages[ply:SteamID64()] = 0
+				else
+					usages[ply:SteamID64()] = nil
+
+					self:RemoveTimer(ply:SteamID64())
+				end
+			end)
+
+			self:Store(ply, ent, healed)
+
+			usages[ply:SteamID64()] = 0
+		else
+			usages[ply:SteamID64()] = usages[ply:SteamID64()] + healed
+		end
+	end
 end
 
 function event:Store(ply, ent, healed)
-    local tbl = {
-        [1] = ply:GetDamagelogID(),
-        [2] = healed
-    }
+	local tbl = {
+		[1] = ply:GetDamagelogID(),
+		[2] = healed
+	}
+	local placer = ent:GetPlacer()
+	local validOwner = IsValid(placer)
 
-    local placer = ent:GetPlacer()
-    local validOwner = IsValid(placer)
+	if validOwner then
+		table.insert(tbl, true)
+		table.insert(tbl, placer:GetDamagelogID())
+	else
+		table.insert(tbl, false)
+	end
 
-    if validOwner then
-        table.insert(tbl, true)
-        table.insert(tbl, placer:GetDamagelogID())
-    else
-        table.insert(tbl, false)
-    end
-
-    self.CallEvent(tbl)
+	self.CallEvent(tbl)
 end
 
 function event:RemoveTimer(id)
-    local timername = "HealTimer_" .. tostring(id)
-
-    if timer.Exists(timername) then
-        timer.Remove(timername)
-    end
+	local timername = "HealTimer_" .. tostring(id)
+	if timer.Exists(timername) then
+		timer.Remove(timername)
+	end
 end
 
 function event:TTTEndRound()
-    for k in pairs(usages) do
-        self:RemoveTimer(k)
-    end
+	for k in pairs(usages) do
+		self:RemoveTimer(k)
+	end
 end
 
-function event:ToString(tbl, roles)
-    local ply = Damagelog:InfoFromID(roles, tbl[1])
-    local healerNick
+function event:ToString(tbl, rls)
+	local ply = Damagelog:InfoFromID(rls, tbl[1])
+	local healerNick
 
-    if tbl[3] then
-        local healer = Damagelog:InfoFromID(roles, tbl[4])
-        healerNick = healer.nick .. " [" .. Damagelog:StrRole(healer.role) .. "]"
-    else
-        healerNick = TTTLogTranslate(GetDMGLogLang, "healerNick")
-    end
+	if tbl[3] then
+		local healer = Damagelog:InfoFromID(rls, tbl[4])
 
-    return string.format(TTTLogTranslate(GetDMGLogLang, "HealthStationHeal"), ply.nick, Damagelog:StrRole(ply.role), tbl[2], healerNick)
+		healerNick = healer.nick .. " [" .. Damagelog:StrRole(healer.role) .. "]"
+	else
+		healerNick = TTTLogTranslate(GetDMGLogLang, "healerNick")
+	end
+
+	return string.format(TTTLogTranslate(GetDMGLogLang, "HealthStationHeal"), ply.nick, Damagelog:StrRole(ply.role), tbl[2], healerNick)
 end
 
 function event:IsAllowed(tbl)
-    return Damagelog.filter_settings["filter_show_healthstation"]
+	return Damagelog.filter_settings["filter_show_healthstation"]
 end
 
 function event:Highlight(line, tbl, text)
-    if table.HasValue(Damagelog.Highlighted, tbl[1]) or table.HasValue(Damagelog.Highlighted, tbl[2]) then
-        return true
-    end
+	if table.HasValue(Damagelog.Highlighted, tbl[1]) or table.HasValue(Damagelog.Highlighted, tbl[2]) then
+		return true
+	end
 
-    return false
+	return false
 end
 
 function event:GetColor(tbl)
-    return Damagelog:GetColor("color_heal")
+	return Damagelog:GetColor("color_heal")
 end
 
-function event:RightClick(line, tbl, roles, text)
-    line:ShowTooLong(true)
-    local ply = Damagelog:InfoFromID(roles, tbl[1])
+function event:RightClick(line, tbl, rls, text)
+	line:ShowTooLong(true)
 
-    if tbl[3] then
-        local healer = Damagelog:InfoFromID(roles, tbl[4])
-        line:ShowCopy(true, {ply.nick, util.SteamIDFrom64(ply.steamid64)}, {healer.nick, util.SteamIDFrom64(healer.steamid64)})
-    else
-        line:ShowCopy(true, {ply.nick, util.SteamIDFrom64(ply.steamid64)})
-    end
+	local ply = Damagelog:InfoFromID(rls, tbl[1])
+
+	if tbl[3] then
+		local healer = Damagelog:InfoFromID(rls, tbl[4])
+
+		line:ShowCopy(true, {ply.nick, util.SteamIDFrom64(ply.steamid64)}, {healer.nick, util.SteamIDFrom64(healer.steamid64)})
+	else
+		line:ShowCopy(true, {ply.nick, util.SteamIDFrom64(ply.steamid64)})
+	end
 end
 
 Damagelog:AddEvent(event)
