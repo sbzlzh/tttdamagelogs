@@ -21,6 +21,4 @@ if SERVER then
 else
     include("damagelogs/client/init.lua")
 end
--- else
--- print("Gamemode is not TTT")
 -- end

@@ -103,39 +103,39 @@ function Damagelog:FormatTime(t)
         return "Forever"
     elseif t < 60 then
         if t == 1 then
-            return "one second"
+            return "一 秒"
         else
-            return t .. " seconds"
+            return t .. " 秒"
         end
     elseif t < 3600 then
         if math.Round(t / 60) == 1 then
-            return "one minute"
+            return "一 分钟"
         else
-            return math.Round(t / 60) .. " minutes"
+            return math.Round(t / 60) .. " 分钟"
         end
     elseif t < 86400 then
         if math.Round(t / 3600) == 1 then
-            return "one hour"
+            return "一 小时"
         else
-            return math.Round(t / 3600) .. " hours"
+            return math.Round(t / 3600) .. " 小时"
         end
     elseif t < 604800 then
         if math.Round(t / 86400) == 1 then
-            return "one day"
+            return "一 天"
         else
-            return math.Round(t / 86400) .. " days"
+            return math.Round(t / 86400) .. " 天"
         end
     elseif t < 2592000 then
         if math.Round(t / 604800) == 1 then
-            return "one week"
+            return "一 周"
         else
-            return math.Round(t / 604800) .. " weeks"
+            return math.Round(t / 604800) .. " 周"
         end
     else
         if math.Round(t / 2592000) == 1 then
-            return "one month"
+            return "一 个月"
         else
-            return math.Round(t / 2592000) .. " months"
+            return math.Round(t / 2592000) .. " 个月"
         end
     end
 end
@@ -164,9 +164,9 @@ function Damagelog:SetSlays(admin, steamid, slays, reason, target)
 
         if ulx then
             if target then
-                ulx.fancyLogAdmin(admin, aslay and "#A removed the autoslays of #T." or "#A removed the autojails of #T.", target)
+                ulx.fancyLogAdmin(admin, aslay and "#A 移除了 #T 的背锅。" or "#A 移除了 #T 的监禁。", target)
             else
-                ulx.fancyLogAdmin(admin, aslay and "#A removed the autoslays of #s." or "#A removed the jails of #s.", steamid)
+                ulx.fancyLogAdmin(admin, aslay and "#A 移除了 #T 的背锅。" or "#A 移除了 #T 的监禁。", steamid)
             end
         elseif sam then
             if target then
@@ -212,12 +212,12 @@ function Damagelog:SetSlays(admin, steamid, slays, reason, target)
                 if target then
                     if ulx then
                         if aslay then
-                            msg = "#T was already autoslain "
+                            msg = "#T 已经有 "
                         else
                             msg = "#T was already autojailed "
                         end
 
-                        ulx.fancyLogAdmin(admin, msg .. slays .. " time(s) by #A for #s.", target, list, reason)
+                        ulx.fancyLogAdmin(admin, msg .. slays .. " 把锅，由 #A 给予 #s.", target, list, reason)
                     elseif sam then
                         sam.player.send_message(admin, "{T} was already {V_1} {V} time(s) by {A} for {V_2}.", {
                             T = target:Nick(),
@@ -264,12 +264,12 @@ function Damagelog:SetSlays(admin, steamid, slays, reason, target)
                 if target then
                     if ulx then
                         if aslay then
-                            msg = " autoslays to #T (#s). He was previously autoslain "
+                            msg = " 把锅给 #T (原因：#s)。他在此之前还需要背 "
                         else
                             msg = " autojails to #T (#s). He was previously autojailed "
                         end
 
-                        ulx.fancyLogAdmin(admin, "#A " .. (difference > 0 and "added " or "removed ") .. math.abs(difference) .. msg .. old_slays .. " time(s) by #s.", target, reason, list)
+                        ulx.fancyLogAdmin(admin, "#A " .. (difference > 0 and "添加 " or "移除 ") .. math.abs(difference) .. msg .. old_slays .. " 把锅，由 #s 给予的。", target, reason, list)
                     elseif sam then
                         sam.player.send_message(nil, "{A} {V_1} {V} {V_2} {T} for {R}. They were previously {V_3} {V_4} time(s) by {V_5}.", {
                             A = admin_nick,
@@ -326,14 +326,14 @@ function Damagelog:SetSlays(admin, steamid, slays, reason, target)
             if target then
                 if ulx then
                     if aslay then
-                        msg = " autoslays to #T (#s)"
+                        msg = " 把锅给 #T (原因：#s)"
                     else
                         msg = " autojails to #T (#s)"
                     end
 
-                    ulx.fancyLogAdmin(admin, "#A added " .. slays .. msg, target, reason)
+                    ulx.fancyLogAdmin(admin, "#A 添加了 " .. slays .. msg, target, reason)
                 elseif sam then
-                    sam.player.send_message(nil, "{A} added {V} " .. (aslay and "autoslays" or "autojails") .. " to {T} ({V_2}).", {
+                    sam.player.send_message(nil, "{A} 添加 {V} " .. (aslay and "autoslays" or "autojails") .. " to {T} ({V_2}).", {
                         A = admin_nick,
                         V = slays,
                         T = target:Nick(),
@@ -348,9 +348,9 @@ function Damagelog:SetSlays(admin, steamid, slays, reason, target)
                         msg = " autojails to #s (#s)"
                     end
 
-                    ulx.fancyLogAdmin(admin, "#A added " .. slays .. msg, steamid, reason)
+                    ulx.fancyLogAdmin(admin, "#A 添加 " .. slays .. msg, steamid, reason)
                 elseif sam then
-                    sam.player.send_message(nil, "{A} added {V} " .. (aslay and "autoslays" or "autojails") .. " to {T} ({V_2}).", {
+                    sam.player.send_message(nil, "{A} 添加 {V} " .. (aslay and "autoslays" or "autojails") .. " to {T} ({V_2}).", {
                         A = admin_nick,
                         V = slays,
                         T = steamid,

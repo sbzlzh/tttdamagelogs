@@ -20,46 +20,46 @@ local function CreateCommand()
 
                 Damagelog:SetSlays(calling_ply, target, rounds, reason, false)
             else
-                ULib.tsayError(calling_ply, "Invalid steamid.", true)
+                ULib.tsayError(calling_ply, "无效的STEAMID。", true)
             end
         end
 
         function ulx.cslays(calling_ply, target)
             -- TODO: Support MySQL
             local data = Damagelog.SQLiteDatabase.QuerySingle(string.format("SELECT * FROM damagelog_autoslay WHERE ply = %s", sql.SQLStr(target:SteamID())))
-            local txt = aslay and "slays" or "jails"
+            local txt = aslay and "的锅" or "的监禁"
             local p = "has"
 
             if calling_ply == target then
-                p = "have"
+                p = "有"
             end
 
             if data then
-                ulx.fancyLogAdmin(calling_ply, "#T " .. p .. " " .. data.slays .. " " .. txt .. " left with the reason : #s", target, data.reason)
+                ulx.fancyLogAdmin(calling_ply, "#T " .. p .. "" .. data.slays .. " 把" .. txt .. "，留下的原因为: #s。", target, data.reason)
             else
-                ulx.fancyLogAdmin(calling_ply, "#T " .. p .. " no " .. txt .. " left.", target)
+                ulx.fancyLogAdmin(calling_ply, "#T " .. "没" .. p .. "剩余" .. txt .. ".", target)
             end
         end
 
         function ulx.cslaysid(calling_ply, steamid)
             if not ULib.isValidSteamID(steamid) then
-                ULib.tsayError(calling_ply, "Invalid steamid.", true)
+                ULib.tsayError(calling_ply, "无效的STEAMID。", true)
 
                 return
             end
 
             -- TODO: Support MySQL
             local data = Damagelog.SQLiteDatabase.QuerySingle(string.format("SELECT * FROM damagelog_autoslay WHERE ply = %s", sql.SQLStr(steamid)))
-            local txt = aslay and "slays" or "jails"
+            local txt = aslay and "的锅" or "的监禁"
 
             if data then
-                ulx.fancyLogAdmin(calling_ply, "#s has " .. data.slays .. " " .. txt .. " left with the reason : #s", steamid, data.reason)
+                ulx.fancyLogAdmin(calling_ply, "#s 有 " .. data.slays .. " 把" .. txt .. "，留下的原因为: #s。", steamid, data.reason)
             else
-                ulx.fancyLogAdmin(calling_ply, "#s has no " .. txt .. " left.", steamid)
+                ulx.fancyLogAdmin(calling_ply, "#s 没有剩余" .. txt .. ".", steamid)
             end
         end
 
-        local autoslay = ulx.command("TTT", aslay and "ulx aslay" or "ulx ajail", ulx.autoslay, aslay and "!aslay" or "!ajail")
+        local autoslay = ulx.command("TTT RDM管理器", aslay and "ulx aslay" or "ulx ajail", ulx.autoslay, aslay and "!aslay" or "!ajail")
 
         autoslay:addParam({
             type = ULib.cmds.PlayerArg
@@ -69,13 +69,13 @@ local function CreateCommand()
             type = ULib.cmds.NumArg,
             min = 0,
             default = 1,
-            hint = "rounds (0 to cancel slay)",
+            hint = "次数 (0 表示取消)",
             ULib.cmds.optional, ULib.cmds.round
         })
 
         autoslay:addParam({
             type = ULib.cmds.StringArg,
-            hint = aslay and "slay reason" or "jail reason",
+            hint = aslay and "未说明" or "jail reason",
             default = Damagelog.Autoslay_DefaultReason,
             ULib.cmds.optional, ULib.cmds.takeRestOfLine
         })
@@ -84,13 +84,13 @@ local function CreateCommand()
         local help
 
         if aslay then
-            help = "Slays the target for a specified number of rounds. Set the rounds to 0 to cancel the slay."
+            help = "在指定回合数内杀死目标将其背锅。将回合数设为 0 可取消背锅。"
         else
-            help = "Jails the target for a specified number of rounds. Set the rounds to 0 to cancel the jails."
+            help = "将目标囚禁指定回合数。将回合数设为 0 可取消囚禁。"
         end
 
         autoslay:help(help)
-        local autoslayid = ulx.command("TTT", aslay and "ulx aslayid" or "ulx ajailid", ulx.autoslayid, aslay and "!aslayid" or "!ajailid")
+        local autoslayid = ulx.command("TTT RDM管理器", aslay and "ulx aslayid" or "ulx ajailid", ulx.autoslayid, aslay and "!aslayid" or "!ajailid")
 
         autoslayid:addParam({
             type = ULib.cmds.StringArg,
@@ -101,13 +101,13 @@ local function CreateCommand()
             type = ULib.cmds.NumArg,
             min = 0,
             default = 1,
-            hint = aslay and "rounds (0 to cancel slay)" or "rounds (0 to cancel jails)",
+            hint = aslay and "次数 (0 表示取消背锅)" or "rounds (0 to cancel jails)",
             ULib.cmds.optional, ULib.cmds.round
         })
 
         autoslayid:addParam({
             type = ULib.cmds.StringArg,
-            hint = aslay and "slay reason" or "jail reason",
+            hint = aslay and "未说明" or "jail reason",
             default = Damagelog.Autoslay_DefaultReason,
             ULib.cmds.optional, ULib.cmds.takeRestOfLine
         })
@@ -115,20 +115,20 @@ local function CreateCommand()
         autoslayid:defaultAccess(ULib.ACCESS_ADMIN)
 
         if aslay then
-            help = "Slays the steamid for a specified number of rounds. Set the rounds to 0 to cancel the slay."
+            help = "在指定回合数内杀死目标将其背锅。将回合数设为 0 可取消背锅。"
         else
-            help = "Jails the steamid for a specified number of rounds. Set the rounds to 0 to cancel the jails."
+            help = "将目标囚禁指定回合数。将回合数设为 0 可取消囚禁。"
         end
 
         autoslayid:help(help)
-        local cslays = ulx.command("TTT", aslay and "ulx cslays" or "ulx cjails", ulx.cslays, aslay and "!cslays" or "!cjails")
+        local cslays = ulx.command("TTT RDM管理器", aslay and "ulx cslays" or "ulx cjails", ulx.cslays, aslay and "!cslays" or "!cjails")
 
         cslays:addParam({
             type = ULib.cmds.PlayerArg
         })
 
         cslays:defaultAccess(ULib.ACCESS_ADMIN)
-        local cslaysid = ulx.command("TTT", aslay and "ulx cslaysid" or "ulx cjailsid", ulx.cslaysid, aslay and "!cslaysid" or "!cjailsid")
+        local cslaysid = ulx.command("TTT RDM管理器", aslay and "ulx cslaysid" or "ulx cjailsid", ulx.cslaysid, aslay and "!cslaysid" or "!cjailsid")
 
         cslaysid:addParam({
             type = ULib.cmds.StringArg,
@@ -155,7 +155,7 @@ local function CreateCommand()
 
                 Damagelog:SetSlays(calling_ply, target, rounds, reason, false)
             else
-                sam.player.send_message(calling_ply, "{V_1} is an invalid steamid.", {
+                sam.player.send_message(calling_ply, "{V_1} 是一个无效的STEAMID。", {
                     V_1 = target
                 })
             end
@@ -174,7 +174,7 @@ local function CreateCommand()
             end
 
             if data then
-                sam.player.send_message(calling_ply, "{T} {V_1} {V} {V_2} left with the reason : {V_3}", {
+                sam.player.send_message(calling_ply, "{T} {V_1} {V} {V_2} 留下的理由 : {V_3}", {
                     T = t,
                     V_1 = p,
                     V = data.slays,
@@ -192,7 +192,7 @@ local function CreateCommand()
 
         function sam.cslaysid(calling_ply, steamid)
             if not sam.is_steamid(steamid) then
-                sam.player.send_message(calling_ply, "{V_1} is an invalid steamid.", {
+                sam.player.send_message(calling_ply, "{V_1} 是一个无效的STEAMID。", {
                     V_1 = steamid
                 })
 
@@ -472,7 +472,7 @@ if CLIENT then
     local aslay = mode == 1
 
     function Damagelog.SlayMessage()
-        chat.AddText(Color(255, 128, 0), "[Autoslay] ", Color(255, 128, 64), net.ReadString())
+        chat.AddText(Color(255, 128, 0), "[自动背锅] ", Color(255, 128, 64), net.ReadString())
     end
 
     net.Receive("DL_SlayMessage", Damagelog.SlayMessage)
@@ -483,8 +483,8 @@ if CLIENT then
         local reason = net.ReadString()
         local _time = net.ReadString()
         if not IsValid(ply) or not ply:IsPlayer() or not list or not reason or not _time then return end
-        local text = aslay and " has been autoslain by " or " has been autojailed by "
-        chat.AddText(Color(255, 62, 62), ply:Nick(), color_white, text, color_lightblue, list .. " ", color_white, _time .. " ago with the reason: '" .. reason .. "'.")
+        local text = aslay and " 已被自动背锅 " or " 已被自动监禁 "
+        chat.AddText(Color(255, 62, 62), ply:Nick(), color_white, text, color_lightblue, "，在 ", color_white, _time .. "之前给予的，理由为: '" .. reason .. "'。") -- list
     end)
 
     net.Receive("DL_AutoSlaysLeft", function()
