@@ -1,4 +1,4 @@
-CreateClientConVar("ttt_dmglogs_language", "english", FCVAR_ARCHIVE)
+CreateClientConVar("ttt_dmglogs_language", "chinese", FCVAR_ARCHIVE)
 GetDMGLogLang = GetConVar("ttt_dmglogs_language"):GetString()
 
 cvars.AddChangeCallback("ttt_dmglogs_language", function(convar_name, value_old, value_new)
@@ -86,7 +86,7 @@ function Damagelog:OpenMenu()
 
     self.Menu = vgui.Create("DFrame")
     self.Menu:SetSize(x, y)
-    self.Menu:SetTitle("TTT Damagelogs version " .. self.VERSION)
+    self.Menu:SetTitle("TTT Damagelogs 版本 " .. self.VERSION)
     self.Menu:SetDraggable(true)
     self.Menu:MakePopup()
     self.Menu:SetKeyboardInputEnabled(false)
@@ -128,9 +128,9 @@ function Damagelog:OpenMenu()
             surface.SetFont("DermaDefault")
             surface.SetTextColor(color_black)
             surface.SetTextPos(_x + 5, _y + 5)
-            surface.DrawText("Created by Tommy228.")
+            surface.DrawText("由 Tommy228 创建.")
             surface.SetTextPos(_x + 5, _y + 25)
-            surface.DrawText("Licensed under GPL-3.0.")
+            surface.DrawText("根据 GPL-3.0 许可.")
         end
     end
 
